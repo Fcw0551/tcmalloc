@@ -1,67 +1,19 @@
-#pragma once 
+
 #include <mutex>
 #include <iostream>
 #include <assert.h>
-#include "Common.hpp"
-#include "MemoryPool.hpp"
+#include "./Common.hpp"
+#include "./MemoryPool.hpp"
 //自由链表
 class FreeList{
     public:
-    void push(void* obj){
-        //头插链表，表示释放空间
-        assert(obj);
-        nextObj(obj)=_freeList;
-        _freeList=obj;
-        _size++;
-    }
-    void pushRange(void*start,void*end,size_t n){
-        //头插一批
-
-        assert(start);
-        assert(end);
-        //防止传进来一个导致错误
-        if(start==end){
-            push(start);
-            return;
-        }
-        nextObj(end)=_freeList;
-        _freeList=start;
-        _size+=n;
-    }
-    void* pop(){
-        // 头删链表
-        assert(_freeList);
-        void *obj = _freeList;
-        _freeList = nextObj(_freeList);
-        _size--;
-        return obj;
-    }
-    void popRange(void*&start,void*&end,size_t n){
-        //头删一批
-        assert(n);
-        assert(n<=_size);
-        start=_freeList;
-        end=start;
-        for(size_t i=1;i<n;i++){
-            end=nextObj(end);
-        }
-       
-        _freeList=nextObj(end);
-        nextObj(end)=nullptr;
-        _size-=n;
-        return ;
-          
-    }
-    bool empty(){
-        return _freeList==nullptr;
-    }
-    size_t& size(){
-        return _size;
-    }
-    size_t& maxSize(){
-       
-        return _maxSize;
-    }
+    void push(void* obj);
+    void pushRange(void*start,void*end,size_t n);
+    void* pop();
+    void popRange(void*&start,void*&end,size_t n);
+    bool empty();
+    size_t& size();
+    size_t& maxSize();
     private:
     void* _freeList=nullptr;
     size_t _maxSize=1;//freeList最多能够缓存多少个空闲对象
@@ -77,7 +29,7 @@ class FreeList{
 //  [64*1024+1,256*1024] 8*1024byte对齐   freelist[184,208)
 class SizeMap{
     public:
-    static inline size_t _roundUp(size_t bytes,size_t align){
+      static inline size_t _roundUp(size_t bytes,size_t align){
         //根据字节数和对齐粒度算出对齐数
         //计算大于等于align的最小的align倍数
         //(align-1):align-1让高位全是0，低位全是1
@@ -153,31 +105,10 @@ class SizeMap{
     // thread cache从central cache申请多少个内存块
     //运用慢启动：小对象多拿，大对象少拿，因为central cache是一个全局共享，需要加锁
     //小对象如int等类型申请的多
-    static size_t numMoveSize(size_t size){
-        //策略：小内存块可以申请多个，大内存块申请少个
-        if (size == 0) return 0;
-    
-        //计算需要多少个块
-        int num = MAX_BYTES / size;
-        if (num < 2)
-            num = 2;
-    
-        //限制最多能够拿512个内存块
-        if (num > 512)
-            num = 512;
-        return num;
-    }
+    static size_t numMoveSize(size_t size);
 
     //计算一次向系统/pageCache获取几个页
-    static size_t numMovePage(size_t size){
-        size_t num=numMoveSize(size);
-        size_t npage=num*size;//总字节数
-        npage>>=PAGE_SHIFT;//算出需要多少页
-        if(npage==0){
-            npage=1;//不足一页算一页
-        }
-        return npage;
-    }
+    static size_t numMovePage(size_t size);
 };
 
 
@@ -197,74 +128,16 @@ struct Span{
 };
 class SpanList{
     public:
-    SpanList(){
-        //初始化哨兵位头节点
-        _head=_spanPool.New();
-        _head->_prev=_head;
-        _head->_next=_head;
-    }
-    void print(){
-        std::cout<<"spanList开始打印:"<<std::endl;
-        for(auto it=begin();it!=end();it=it->_next){
-            std::cout<<"span:"<<it<<std::endl;
-            std::cout<<"_n:"<<it->_n<<std::endl;
-            std::cout<<"_pageID:"<<it->_pageID<<std::endl;
-        }
-    }
+    SpanList();
+    void print();
     //简单实现迭代器,左闭右开[begin,end)
-    Span* begin(){
-        return _head->_next;
-    }
-    Span* end(){
-        //所以这里返回哨兵位
-        return _head;
-    }
-    bool empty(){
-        return _head->_next==_head;
-    }
-    void insert(Span* pos,Span*newSpan){
-        assert(pos);
-        assert(newSpan);
-        Span* prev=pos->_prev;
-        prev->_next=newSpan;
-        newSpan->_prev=prev;
-        newSpan->_next=pos;
-        pos->_prev=newSpan;
-    }
-    void pushFront(Span*span){
-        // span->_next=_head->_next;
-        // _head->_next->_prev=span;
-        // _head->_next=span;
-        // span->_prev=_head;
-
-        //复用insert
-        insert(begin(),span);
-    }
-    void erase(Span*pos){
-        //注意erase不需要调用free，因为它释放之后是需要交给pageCache的
-        //这里的erase仅仅是改变链表结构
-
-        assert(pos);
-        assert(pos!=_head);
-        Span* prev=pos->_prev;
-        Span* next=pos->_next;
-
-        prev->_next=next;
-        next->_prev=prev;
-        pos->_prev=nullptr;
-        pos->_next=nullptr;
-    }
-    Span* popFront()
-    {
-        if(empty())
-        {
-            return nullptr;
-        }
-
-        Span *front = _head->_next;
-        erase(front);
-        return front;
-    }
+    Span* begin();
+    Span* end();
+    bool empty();
+    void insert(Span* pos,Span*newSpan);
+    void pushFront(Span*span);
+    void erase(Span*pos);
+    Span* popFront();
 
     private:
     Span* _head;
@@ -273,4 +146,3 @@ class SpanList{
     std::mutex _spanMtx;//桶锁
 
 };
-MemoryPool<Span> SpanList::_spanPool;

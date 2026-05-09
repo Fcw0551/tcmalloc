@@ -1,18 +1,14 @@
 //CentralCache的设计
 //锁竞争？（只有桶锁，全部争一个桶的时候才需要锁，所以大概率是很少有竞争情况）
 //依旧按照thread cache的管理进行管理内存
-#pragma once 
-#include "Common.hpp"
-#include "PageCache.hpp"
-class CentralCache{
-    public:
-    //单例模式
 
-    static CentralCache*getInstance(){
+#include "../include/CentralCache.hpp"
+CentralCache CentralCache::_sInst ;//类外进行初始化实现单例模式
+    CentralCache*CentralCache::getInstance(){
         return &_sInst;
     }
     //获取一个非空的span
-    Span* getOneSpan(SpanList&list,size_t byteSize){
+    Span* CentralCache::getOneSpan(SpanList&list,size_t byteSize){
         //对于span是多页的，所以要明确一页一页的
 
         //1.在spanlist中寻找一个非空的span
@@ -70,7 +66,7 @@ class CentralCache{
         return span;
     }
     //从中心缓存获取一定数量的对象给thread cache
-    size_t getRangeObj(void*& start,void*& end,size_t batchNum,size_t size){
+    size_t CentralCache::getRangeObj(void*& start,void*& end,size_t batchNum,size_t size){
         size_t index=SizeMap::index(size);//计算下标
         
         //注意此时需要加锁，因为你访问了临界资源
@@ -123,7 +119,7 @@ class CentralCache{
 
     }
     //将一定的数量的对象释放到span跨度
-    void delListToSpans(void* start,size_t byteSize){
+    void CentralCache::delListToSpans(void* start,size_t byteSize){
         //这里的span内部的内存块顺序没关系，span掌管连续的内存空间即可
         
         //根据byteSize计算index
@@ -163,15 +159,3 @@ class CentralCache{
 
         _spanList[index]._spanMtx.unlock(); // 最后再解锁
     }
-    private:
-    //成员变量
-    SpanList _spanList[NFREELISTS];
-    static CentralCache _sInst;
-    private:
-    //禁掉构造函数避免new等构建对象
-    CentralCache(){}
-    //禁掉拷贝构造函数
-    CentralCache(const CentralCache& cc)=delete;
-    CentralCache& operator=(const CentralCache&cc)=delete;
-};
-CentralCache CentralCache::_sInst;//类外进行初始化实现单例模式

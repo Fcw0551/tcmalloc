@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <iomanip>   // 新增：用于 std::setprecision
 #include <random>    // 新增：用于 std::shuffle 的随机数引擎
-#include "Alloc.hpp"
+#include "../include/Alloc.hpp"
 #include <atomic>
 // // 测试配置（可调整）
 // const int AllocCount = 10000;    // 每个线程申请次数（加大更能体现性能差异）

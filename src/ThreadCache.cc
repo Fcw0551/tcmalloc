@@ -1,13 +1,7 @@
-#pragma once 
-#include <iostream>
-#include <assert.h>
-#include "Common.hpp"
-#include "CentralCache.hpp"
 
-class ThreadCache{
-    public:
+#include "../include/ThreadCache.hpp"
     //申请内存-字节数
-    void* alloc(size_t size){
+    void* ThreadCache::alloc(size_t size){
         assert(size<=MAX_BYTES);
         size_t alignSize=SizeMap::roundUp(size);//计算对应的那个freeList存储的是多少字节
         size_t index=SizeMap::index(size);//计算下标
@@ -22,7 +16,7 @@ class ThreadCache{
     }
     
     //释放内存
-    void dealloc(void* obj,size_t size){
+    void ThreadCache::dealloc(void* obj,size_t size){
         THREADCACHE_LOG("dealloc size："<<size);
         //释放内存是交给freeList
         assert(obj);
@@ -39,7 +33,7 @@ class ThreadCache{
         }
     }
     //从CenterCache申请内存
-    void* allocFromCentralCache(size_t index,size_t size){
+    void* ThreadCache::allocFromCentralCache(size_t index,size_t size){
         //计算需要的块数，取小的
         size_t allocNum=std::min(_freeLists[index].maxSize(),SizeMap::numMoveSize(size));
         if(allocNum==_freeLists[index].maxSize()){
@@ -65,7 +59,7 @@ class ThreadCache{
         }
     }
     //释放内存到CeneterCache
-    void dellocToCentralCache(FreeList& list,size_t byteSize){
+    void ThreadCache::dellocToCentralCache(FreeList& list,size_t byteSize){
        void* start=nullptr;
        void* end=nullptr;
 
@@ -74,8 +68,6 @@ class ThreadCache{
        THREADCACHE_LOG("释放过后thread中list的size:"<<list.size());
        CentralCache::getInstance()->delListToSpans(start,byteSize);
     }
-    
-    private:
-    FreeList _freeLists[NFREELISTS];//哈希桶：桶的元素是一个
-};
+
+
 

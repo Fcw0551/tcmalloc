@@ -1,4 +1,8 @@
 #pragma once
+#include <iostream>   // 解决 std::cout/std::endl 错误
+#include <cstdio>     // 解决 perror 错误
+#include <stdexcept>  // 解决 std::bad_alloc 错误
+#include <cstddef>
 // 全局作用域（函数外）添加头文件包含（仅 Linux）
 #ifdef __linux__
 #include <sys/mman.h>
