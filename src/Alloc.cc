@@ -4,6 +4,7 @@
 
 void* Alloc(size_t size){
     if(size>MAX_BYTES){
+        //超过64页的直接找页缓存拿，页缓存如果有就给，没有在向os申请
         PAGECACHE_LOG("Alloc size"<<size <<" is too large");
         
         size_t alignSize=SizeMap::roundUp(size);//向上对齐

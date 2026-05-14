@@ -34,13 +34,13 @@ CentralCache CentralCache::_sInst ;//类外进行初始化实现单例模式
         Span* span=PageCache::getInstance()->newSpan(SizeMap::numMovePage(byteSize));
         
         assert(span);
-        span->_isuse=true;//标记span被使用
-        span->_objSize=byteSize;//标记切成的每块小的内存块大小，后续释放的时候可以通过span结构体进行查找
-        PageCache::getInstance()->_pageMtx.unlock(); //解大锁
+        span->_isuse=true;                                      //标记span被使用
+        span->_objSize=byteSize;                                //标记切成的每块小的内存块大小，后续释放的时候可以通过span结构体进行查找
+        PageCache::getInstance()->_pageMtx.unlock();            //解大锁
 
         //此时不需要着急加桶锁，因为申请的这块span只有当前线程有地址
         //计算span的内存的起始地址和大小
-        // 计算span的大块内存的起始地址和大块内存的大小（字节数）
+        //计算span的大块内存的起始地址和大块内存的大小（字节数）
         char *start = (char *)(span->_pageID << PAGE_SHIFT);
         size_t bytes = span->_n << PAGE_SHIFT;
 
@@ -129,7 +129,7 @@ CentralCache CentralCache::_sInst ;//类外进行初始化实现单例模式
         while (start)
         {
             void *next = nextObj(start);
-            Span *span = PageCache::getInstance()->mapObjectToSpan(start);
+            Span *span = PageCache::getInstance()->mapObjectToSpan(start);  //映射找到那个span（采用基数树）
             assert(span);
             nextObj(start) = span->_freeList;
             span->_freeList = start;

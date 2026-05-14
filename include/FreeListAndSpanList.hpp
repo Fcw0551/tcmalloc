@@ -15,9 +15,9 @@ class FreeList{
     size_t& size();
     size_t& maxSize();
     private:
-    void* _freeList=nullptr;
-    size_t _maxSize=1;//freeList最多能够缓存多少个空闲对象
-    size_t _size=0;
+    void* _freeList=nullptr;        //头节点
+    size_t _maxSize=1;              //freeList最多能够缓存多少个空闲对象。这个是有动态增长策略的
+    size_t _size=0;                 //标明还有多少个内存块
 };
 
 // 管理对齐和映射关系
@@ -43,6 +43,7 @@ class SizeMap{
     //256KB如果按照4kb一页来算最大能够申请64页的内存空间
     //对于64——128的直接向pageCache申请
     //>128的向os申请
+    //计算对齐到哪个字节
     static inline size_t roundUp(size_t bytes){
         //对齐大小计算
         if(bytes<=128){
@@ -64,7 +65,7 @@ class SizeMap{
         else{
             //大于256KB的，4kb的对齐数
             CENTRALCACHE_LOG("256KB以上申请内存，请使用os申请,申请的字节数为："<<bytes);
-            return _roundUp(bytes,1<<PAGE_SHIFT);
+            return _roundUp(bytes,1<<PAGE_SHIFT);//计算多少页
         }
         return -1;
     }
@@ -73,7 +74,7 @@ class SizeMap{
         //计算该bytes应该映射到目前级别下的第几个链表
         //1<<align_shift  1<<3=8  对齐8字节
         //向上取整
-        return ((bytes+(1<<align_shift)-1)>>align_shift)-1;
+        return ((bytes+(1<<align_shift)-1)>>align_shift)-1;//-1是因为下标从0开始
     }
     //计算映射到哪个自由链表桶
     static inline size_t index(size_t bytes){
@@ -114,17 +115,17 @@ class SizeMap{
 
 //以页为单位的大内存管理span的定义以及spanlist定义
 struct Span{
-    PAGE_ID _pageID=0;//大块内存起始页的页号
-    size_t _n=0;      //页的数量
+    PAGE_ID _pageID=0;      //大块内存起始页的页号
+    size_t _n=0;            //页的数量
     
-    Span* _next=nullptr;//双向链表的结构
-    Span* _prev=nullptr;//
+    Span* _next=nullptr;    //双向链表的结构
+    Span* _prev=nullptr;
 
     size_t _objSize=0;      //切好的小对象的大小
     size_t _useCount=0;     //切好的小块内存，被分配给thread cache的数量
     void* _freeList=nullptr;//切好的小块内存的自由链表
 
-    bool _isuse=false;  //是否在被使用(是否是刚刚central cache从page cache获取的，避免被合并)
+    bool _isuse=false;      //是否在被使用(是否是刚刚central cache从page cache获取的，避免被合并)
 };
 class SpanList{
     public:

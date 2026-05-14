@@ -7,7 +7,7 @@ class RadixTree
     private:
     // 新增中间层统一常量
     static const int INTERIOR_BITS = (BITS + 2) / 3;       // 第一、二层共用比特数
-    //static const size_t INTERIOR_BITS = 10;                    // 第一、二层共用比特数
+    //static const size_t INTERIOR_BITS = 10;              // 第一、二层共用比特数
     
     static const int INTERIOR_LENGTH = 1 << INTERIOR_BITS; // 第一、二层共用数组大小
     static const int LEAF_BITS = BITS - 2 * INTERIOR_BITS; // 第三层比特数

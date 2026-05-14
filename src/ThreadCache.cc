@@ -37,7 +37,9 @@
         //计算需要的块数，取小的
         size_t allocNum=std::min(_freeLists[index].maxSize(),SizeMap::numMoveSize(size));
         if(allocNum==_freeLists[index].maxSize()){
+            //慢启动策略
             _freeLists[index].maxSize()+=1; //下一次加1
+            //_freeLists[index].maxSize()+=allocNum; //下一次加allocNum
            
         }
         
@@ -52,7 +54,7 @@
             return start;
         }
         else{
-           
+            //把剩下的插入到threadCache的自由链表当中   
             void *startNext = nextObj(start);
             _freeLists[index].pushRange(startNext, end, actualNum - 1);
             return start;
